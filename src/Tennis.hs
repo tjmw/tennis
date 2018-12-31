@@ -1,31 +1,33 @@
  module Tennis
-    ( Point(..), Score(..), Game(..), playerOnePointWin, playerTwoPointWin
+    ( Point(..), Score(..), serverScores, receiverScores
     ) where
 
-data Point = Love | Fifteen | Thirty | Forty | Advantage deriving (Eq, Show)
-type Score = (Point, Point)
-data Game = InProgressGame Score | CompleteGame deriving (Eq, Show)
+data Point = Love | Fifteen | Thirty | Forty deriving (Eq, Show)
+data Score = Score (Point, Point) | Deuce | ServerAdvantage | ReceiverAdvantage
+           | ServerWin | ReceiverWin deriving (Eq, Show)
 
-playerOnePointWin :: Game -> Game
-playerOnePointWin game =
-  case game of
-      InProgressGame score -> InProgressGame (incrementP1Score score)
-      CompleteGame -> CompleteGame
+serverScores :: Score -> Score
+serverScores score =
+  case score of
+    ServerAdvantage -> ServerWin
+    ReceiverAdvantage -> Deuce
+    Deuce -> ServerAdvantage
+    Score (Thirty, Forty) -> Deuce
+    Score (Forty, _) -> ServerWin
+    Score (Thirty, p) -> Score (Forty, p)
+    Score (Fifteen, p) -> Score (Thirty, p)
+    Score (Love, p) -> Score (Fifteen, p)
+    s -> s
 
-playerTwoPointWin :: Game -> Game
-playerTwoPointWin game =
-  case game of
-      InProgressGame score -> InProgressGame (incrementP2Score score)
-      CompleteGame -> CompleteGame
+receiverScores :: Score -> Score
+receiverScores = flipScore . serverScores . flipScore
 
-incrementP1Score :: Score -> Score
-incrementP1Score (Love, s2) = (Fifteen, s2)
-incrementP1Score (Fifteen, s2) = (Thirty, s2)
-incrementP1Score (Thirty, s2) = (Forty, s2)
-incrementP1Score (Forty, s2) = (Forty, s2)
-incrementP1Score (Advantage, s2) = (Advantage, s2)
-
-incrementP2Score :: Score -> Score
-incrementP2Score (p1, p2)
-    = let (newP2, newP1) = incrementP1Score (p2, p1)
-      in  (newP1, newP2)
+flipScore :: Score -> Score
+flipScore score =
+  case score of
+    ServerWin -> ReceiverWin
+    ReceiverWin -> ServerWin
+    ServerAdvantage -> ReceiverAdvantage
+    ReceiverAdvantage -> ServerAdvantage
+    Score (s1, s2) -> Score (s2, s1)
+    s -> s
